@@ -2,16 +2,19 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 const (
 	//commands list
 	disconnectCommand = 1
 
-	roomTimeout = 60 * 5 * time.Second
-	//Must be less than roomTimeout.
-	livenessCheckTime = (roomTimeout * 9) / 10
+	livenessCheckTime = 60 * 5 * time.Second
+	//Must be less than livenessCheckTime.
+	roomTimeout = (livenessCheckTime * 9) / 10
 )
 
 type RoomControl struct {
@@ -29,6 +32,7 @@ type Room struct {
 	control    chan *RoomControl
 	timeout    time.Time
 	clients    map[*Client]bool
+	mux        sync.Mutex
 }
 
 func newRoom(roomID string) *Room {
@@ -61,7 +65,19 @@ func (r *Room) removeClient(c *Client) {
 }
 
 func (r *Room) extendTimeout() {
+	r.mux.Lock()
 	r.timeout = time.Now().Add(roomTimeout)
+	r.mux.Unlock()
+}
+
+func (r *Room) readTimeout() time.Time {
+	r.mux.Lock()
+	defer r.mux.Unlock()
+	return r.timeout
+}
+
+func (r *Room) addClient(conn *websocket.Conn) {
+	newClient(r, conn)
 }
 
 func (r *Room) run() {
