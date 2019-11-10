@@ -18,7 +18,6 @@ const (
 
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 9) / 10
-
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
 )
@@ -73,7 +72,6 @@ func (c *Client) readPump() {
 // application ensures that there is at most one writer to a connection by
 // executing all writes from this goroutine.
 func (c *Client) writePump() {
-	fmt.Println("writePump")
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -85,6 +83,7 @@ func (c *Client) writePump() {
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The room closed the channel.
+				fmt.Println("not ok")
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
@@ -106,6 +105,7 @@ func (c *Client) writePump() {
 			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			c.room.extendTimeout()
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
@@ -124,20 +124,3 @@ func newClient(room *Room, conn *websocket.Conn) {
 	go client.readPump()
 
 }
-
-// // serveWs handles websocket requests from the peer.
-// func serveWs(room *Room, c echo.Context) {
-// 	conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
-
-// 	if err != nil {
-// 		log.Println(err)
-// 		return
-// 	}
-// 	client := &Client{room: room, conn: conn, send: make(chan []byte, 256)}
-// 	client.room.register <- client
-
-// 	// Allow collection of memory referenced by the caller by doing all work in
-// 	// new goroutines.
-// 	go client.writePump()
-// 	go client.readPump()
-// }

@@ -29,6 +29,7 @@ func hello(c echo.Context) error {
 }
 
 func processData(c echo.Context) error {
+	fmt.Printf("rooms count: %+v\n", len(server.rooms))
 	roomID := c.QueryParam("room_id")
 	msg := c.QueryParam("msg")
 
