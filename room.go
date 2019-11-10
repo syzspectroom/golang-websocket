@@ -51,10 +51,15 @@ func newRoom(roomID string) *Room {
 	return room
 }
 
-func (r *Room) dropClients() {
+func (r *Room) stopRoom() {
 	for client := range r.clients {
 		r.removeClient(client)
 	}
+
+	close(r.broadcast)
+	close(r.register)
+	close(r.unregister)
+	close(r.control)
 }
 
 func (r *Room) removeClient(c *Client) {
@@ -81,7 +86,7 @@ func (r *Room) addClient(conn *websocket.Conn) {
 }
 
 func (r *Room) run() {
-	defer r.dropClients()
+	defer r.stopRoom()
 	for {
 		select {
 		case client := <-r.register:
